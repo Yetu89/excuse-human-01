@@ -13,9 +13,23 @@ function validate(text: string): void {
   if (text.includes("\n") || text.includes("\r")) {
     throw new Error("entry must be a single line (no \\n or \\r)");
   }
-  const length = [...text].length;
+  // Count per Unicode code point, not UTF-16 code units, so astral
+  // characters (e.g. emoji) count as one character each, like the scorer.
+  const codePoints = [...text];
+  const length = codePoints.length;
   if (length < 1 || length > 160) {
-    throw new Error(`entry must be 1-160 characters, got ${length}`);
+    throw new Error(
+      `entry must be 1-160 characters (code points), got ${length}`,
+    );
+  }
+  // Reject other invisible control characters besides the newline check above.
+  for (const ch of codePoints) {
+    const code = ch.codePointAt(0) as number;
+    if (code < 0x20 && ch !== "\t") {
+      throw new Error(
+        `entry must not contain control character U+${code.toString(16).padStart(4, "0").toUpperCase()}`,
+      );
+    }
   }
 }
 
